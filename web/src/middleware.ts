@@ -7,15 +7,26 @@ import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let supabaseClient: any;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("Supabase URL or Anon Key is missing. Supabase client will not be initialized.");
+    supabaseClient = null;
+  } else {
+    supabaseClient = createMiddlewareClient({ req, res });
+  }
+
+  if (!supabaseClient) {
+    console.error("Supabase client is not initialized. Cannot get user.");
+    return;
+  }
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabaseClient.auth.getUser();
 
-  // if user is signed in and the current path is / redirect the user to /account
-
-  // if user is not signed in and the current path is not / redirect the user to /
   if (!user && req.nextUrl.pathname.startsWith("/auth/delete")) {
     return NextResponse.redirect(new URL(`/login`, req.url));
   }
